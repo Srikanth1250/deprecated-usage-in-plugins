@@ -1,10 +1,23 @@
+# Stage 1: Build the Jenkins plugin
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
+
+# Install required packages
+RUN apt-get update && apt-get install -y git zip
+
+# Set work directory
+WORKDIR /app
+
+# Copy project files
+COPY . .
+
+# Build the Jenkins plugin
+RUN mvn clean package
+
+# Stage 2: Create a minimal runtime image (if you want to run Jenkins with this plugin)
 FROM jenkins/jenkins:lts
 
-USER root
+# Copy the built .hpi plugin to Jenkins plugins directory
+COPY --from=builder /app/target/*.hpi /usr/share/jenkins/ref/plugins/
 
-RUN apt-get update && apt-get install -y curl
-
-USER jenkins
-
-# Re-type the line below manually
-RUN jenkins-plugin-cli --plugins unique-id
+# Skip setup wizard for easier dev
+ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false
